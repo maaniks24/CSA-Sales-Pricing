@@ -186,4 +186,55 @@ class ProposalFlowTest {
             return ex.getText();
         }
     }
+
+    @Test
+    void numberingIsConfigurablePersistedAndEnforced() throws Exception {
+        JsonNode orig = read("/api/numbering");
+        assertThat(orig.get("proposalPrefix").asText()).isEqualTo("LTPL/PRO");
+        long ud = idOf("/api/customers", "C001");
+        long sw = idOf("/api/software", "SAP-CLOUD");
+        String body = "{\"customerId\":%d,\"software\":[{\"softwareId\":%d}],\"services\":[]}".formatted(ud, sw);
+        try {
+            String cfg = """
+                {"proposalPrefix":"ABC/Q","poPrefix":"ABC/PO","includeFinancialYear":false,"resetEachYear":false,
+                 "numberWidth":3,"seriesStartNo":1,"nextProposalNo":998,"nextPoNo":7}""";
+            JsonNode saved = json.readTree(mvc.perform(put("/api/numbering").contentType(MediaType.APPLICATION_JSON).content(cfg))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+            assertThat(saved.get("proposalExample").asText()).isEqualTo("ABC/Q/998-v1");
+            assertThat(saved.get("poExample").asText()).isEqualTo("ABC/PO/007");
+            assertThat(read("/api/numbering").get("nextProposalNo").asLong()).isEqualTo(998);   // persisted
+
+            JsonNode p1 = json.readTree(mvc.perform(post("/api/proposals").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+            assertThat(p1.get("refNo").asText()).isEqualTo("ABC/Q/998-v1");
+            JsonNode p2 = json.readTree(mvc.perform(post("/api/proposals").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+            assertThat(p2.get("refNo").asText()).isEqualTo("ABC/Q/999-v1");
+            // 3 digits are used up
+            mvc.perform(post("/api/proposals").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isConflict());
+            assertThat(read("/api/numbering").get("nextProposalNo").asLong()).isEqualTo(1000);
+
+            mvc.perform(post("/api/proposals/{id}/generate-po", p1.get("id").asLong())).andExpect(status().isOk());
+            assertThat(read("/api/proposals/" + p1.get("id").asLong()).get("poNo").asText()).isEqualTo("ABC/PO/007");
+
+            // later prefix changes do not rewrite an issued reference, a re-save only moves the version
+            mvc.perform(put("/api/numbering").contentType(MediaType.APPLICATION_JSON)
+                    .content(cfg.replace("ABC/Q", "ZZZ").replace("\"numberWidth\":3", "\"numberWidth\":6").replace("998", "1000")))
+                    .andExpect(status().isOk());
+            JsonNode v2 = json.readTree(mvc.perform(put("/api/proposals/{id}", p1.get("id").asLong()).contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andReturn().getResponse().getContentAsString());
+            assertThat(v2.get("refNo").asText()).isEqualTo("ABC/Q/998-v2");
+
+            // invalid input
+            mvc.perform(put("/api/numbering").contentType(MediaType.APPLICATION_JSON)
+                    .content(cfg.replace("ABC/Q", "bad prefix!"))).andExpect(status().isBadRequest());
+            mvc.perform(put("/api/numbering").contentType(MediaType.APPLICATION_JSON)
+                    .content(cfg.replace("\"nextPoNo\":7", "\"nextPoNo\":5000"))).andExpect(status().isConflict());
+        } finally {
+            mvc.perform(put("/api/numbering").contentType(MediaType.APPLICATION_JSON).content("""
+                {"proposalPrefix":"LTPL/PRO","poPrefix":"LTPL/PO","includeFinancialYear":true,"resetEachYear":true,
+                 "numberWidth":5,"seriesStartNo":1,"nextProposalNo":%d,"nextPoNo":%d}"""
+                    .formatted(orig.get("nextProposalNo").asLong(), orig.get("nextPoNo").asLong()))).andExpect(status().isOk());
+        }
+    }
 }

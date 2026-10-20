@@ -18,4 +18,6 @@ public class PricingConfig {
     private PricingParams params = new PricingParams();
     @Embedded @Valid
     private DocTerms terms = new DocTerms();
+    @Embedded
+    private NumberingConfig numbering = new NumberingConfig();
 }

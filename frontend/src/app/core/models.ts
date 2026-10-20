@@ -180,3 +180,18 @@ export interface DashboardDto {
   topCustomers: { customer: string; count: number; amount: number }[];
   recent: ProposalSummary[];
 }
+
+export interface Numbering {
+  proposalPrefix: string;
+  poPrefix: string;
+  includeFinancialYear: boolean;
+  resetEachYear: boolean;
+  numberWidth: number;
+  seriesStartNo: number;
+  nextProposalNo: number;
+  nextPoNo: number;
+  currentFinancialYear?: string;
+  proposalExample?: string;
+  poExample?: string;
+  maxNumber?: number;
+}

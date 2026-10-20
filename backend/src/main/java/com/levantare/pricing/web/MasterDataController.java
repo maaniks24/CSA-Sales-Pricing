@@ -19,13 +19,16 @@ public class MasterDataController {
     private final SoftwareRepository software;
     private final ServiceItemRepository services;
     private final PricingConfigRepository config;
+    private final com.levantare.pricing.service.NumberingService numbering;
 
     public MasterDataController(CustomerRepository customers, SoftwareRepository software,
-                                ServiceItemRepository services, PricingConfigRepository config) {
+                                ServiceItemRepository services, PricingConfigRepository config,
+                                com.levantare.pricing.service.NumberingService numbering) {
         this.customers = customers;
         this.software = software;
         this.services = services;
         this.config = config;
+        this.numbering = numbering;
     }
 
     // ---- customers ----
@@ -128,7 +131,22 @@ public class MasterDataController {
 
     @PutMapping("/config")
     public PricingConfig updateConfig(@Valid @RequestBody PricingConfig c) {
-        c.setId(PricingConfig.ID);
-        return config.save(c);
+        // numbering has its own endpoint, never overwrite it from here
+        PricingConfig current = config();
+        current.setParams(c.getParams());
+        current.setTerms(c.getTerms());
+        return config.save(current);
+    }
+
+    // ---- reference numbering ----
+    @GetMapping("/numbering")
+    public com.levantare.pricing.web.dto.NumberingDto numbering() {
+        return numbering.view();
+    }
+
+    @PutMapping("/numbering")
+    public com.levantare.pricing.web.dto.NumberingDto updateNumbering(
+            @Valid @RequestBody com.levantare.pricing.web.dto.NumberingDto n) {
+        return numbering.update(n);
     }
 }

@@ -12,7 +12,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,22 +25,19 @@ public class ProposalsService {
     private final SoftwareRepository softwareRepo;
     private final ServiceItemRepository serviceRepo;
     private final PricingConfigRepository configRepo;
-    private final SequenceService sequences;
+    private final NumberingService numbering;
     private final ProposalDocumentBuilder documents;
-    private final String refPrefix;
 
     public ProposalsService(ProposalRepository proposals, CustomerRepository customers, SoftwareRepository softwareRepo,
                             ServiceItemRepository serviceRepo, PricingConfigRepository configRepo,
-                            SequenceService sequences, ProposalDocumentBuilder documents,
-                            @Value("${app.ref-prefix:LTPL}") String refPrefix) {
+                            NumberingService numbering, ProposalDocumentBuilder documents) {
         this.proposals = proposals;
         this.customers = customers;
         this.softwareRepo = softwareRepo;
         this.serviceRepo = serviceRepo;
         this.configRepo = configRepo;
-        this.sequences = sequences;
+        this.numbering = numbering;
         this.documents = documents;
-        this.refPrefix = refPrefix;
     }
 
     @Transactional(readOnly = true)
@@ -68,9 +64,10 @@ public class ProposalsService {
         apply(p, req);
         requireContent(p);
         p.setProposalDate(req.proposalDate() != null ? req.proposalDate() : LocalDate.now());
-        p.setSeqNo(sequences.next("PRO-" + SequenceService.financialYear(p.getProposalDate())));
+        long no = numbering.nextProposalNo(p.getProposalDate());
+        p.setSeqNo((int) no);
         p.setVersion(1);
-        p.setRefNo(refNo(p));
+        p.setRefNo(numbering.proposalRef(p.getProposalDate(), no, 1));
         p.setStatus(ProposalStatus.SAVED);
         p.setCreatedAt(Instant.now());
         p.setUpdatedAt(p.getCreatedAt());
@@ -88,7 +85,8 @@ public class ProposalsService {
             p.setVersion(p.getVersion() + 1);
             p.setStatus(ProposalStatus.SAVED);
         }
-        p.setRefNo(refNo(p));
+        // keep the reference issued earlier (even if the prefix settings changed since), only the version moves
+        p.setRefNo(p.getRefNo().replaceFirst("-v\\d+$", "-v" + p.getVersion()));
         p.setUpdatedAt(Instant.now());
         return toDto(proposals.save(p));
     }
@@ -102,9 +100,9 @@ public class ProposalsService {
     public GeneratedDocument generatePo(Long id) throws IOException {
         Proposal p = find(id);
         if (p.getPoNo() == null) {
-            String fy = SequenceService.financialYear(LocalDate.now());
-            p.setPoNo("%s/PO/%s/%05d".formatted(refPrefix, fy, sequences.next("PO-" + fy)));
-            p.setPoDate(LocalDate.now());
+            LocalDate today = LocalDate.now();
+            p.setPoNo(numbering.poNo(today, numbering.nextPoNo(today)));
+            p.setPoDate(today);
         }
         p.setStatus(ProposalStatus.PO_GENERATED);
         p.setUpdatedAt(Instant.now());
@@ -119,11 +117,6 @@ public class ProposalsService {
 
     private Proposal find(Long id) {
         return proposals.findById(id).orElseThrow(() -> new NotFoundException("Proposal", id));
-    }
-
-    private String refNo(Proposal p) {
-        return "%s/PRO/%s/%05d-v%d".formatted(refPrefix, SequenceService.financialYear(p.getProposalDate()),
-                p.getSeqNo(), p.getVersion());
     }
 
     private void requireContent(Proposal p) {

@@ -2,7 +2,7 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  Customer, DashboardDto, PricingConfig, ProposalDto, ProposalRequest, ProposalSummary, ServiceItem, Software,
+  Customer, DashboardDto, Numbering, PricingConfig, ProposalDto, ProposalRequest, ProposalSummary, ServiceItem, Software,
 } from './models';
 
 const API = '/api';
@@ -25,6 +25,13 @@ export class ApiService {
   }
   saveConfig(c: PricingConfig): Observable<PricingConfig> {
     return this.http.put<PricingConfig>(`${API}/config`, c);
+  }
+
+  numbering(): Observable<Numbering> {
+    return this.http.get<Numbering>(`${API}/numbering`);
+  }
+  saveNumbering(n: Numbering): Observable<Numbering> {
+    return this.http.put<Numbering>(`${API}/numbering`, n);
   }
 
   // proposals -------------------------------------------------------------

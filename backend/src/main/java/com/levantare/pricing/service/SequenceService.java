@@ -14,17 +14,34 @@ public class SequenceService {
         this.repo = repo;
     }
 
-    /** Next number of the given series; callers must run inside a transaction (row is locked until commit). */
+    /** Takes the next number of the series; the first number of a new series is {@code startNo}. */
     @Transactional
-    public int next(String key) {
-        DocSequence seq = repo.lockByKey(key).orElseGet(() -> {
+    public long next(String key, long startNo) {
+        DocSequence seq = lock(key, startNo);
+        seq.setLastValue(seq.getLastValue() + 1);
+        return seq.getLastValue();
+    }
+
+    /** The number {@link #next} would hand out, without consuming it. */
+    @Transactional(readOnly = true)
+    public long peek(String key, long startNo) {
+        return repo.findById(key).map(s -> s.getLastValue() + 1).orElse(startNo);
+    }
+
+    /** Makes {@code next} the number handed out by the next call. */
+    @Transactional
+    public void setNext(String key, long next) {
+        DocSequence seq = lock(key, next);
+        seq.setLastValue(next - 1);
+    }
+
+    private DocSequence lock(String key, long startNo) {
+        return repo.lockByKey(key).orElseGet(() -> {
             DocSequence s = new DocSequence();
             s.setSeqKey(key);
-            s.setLastValue(0);
+            s.setLastValue(startNo - 1);
             return repo.saveAndFlush(s);
         });
-        seq.setLastValue(seq.getLastValue() + 1);
-        return (int) seq.getLastValue();
     }
 
     /** Indian financial year, e.g. 2026-27 for any date between 1 Apr 2026 and 31 Mar 2027. */

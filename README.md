@@ -29,7 +29,7 @@ cd frontend && npm install --legacy-peer-deps && npm start
 ```
 
 Everything in one go: `docker compose up --build` (UI on http://localhost:4200). Backend settings are environment
-variables: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `PORT`, `REF_PREFIX` (default `LTPL`), `CORS_ALLOWED_ORIGINS`.
+variables: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `PORT`, `CORS_ALLOWED_ORIGINS`.
 
 Tests: `cd backend && mvn test` (pricing formulas against the workbook figures, whole API flow incl. generating
 both documents).
@@ -44,7 +44,7 @@ both documents).
 * **Proposals** - list, open, delete, regenerate the document.
 * **Proposal editor** - the main process (customer -> software -> services -> parameters, live price summary).
 * **Customers / Software / Services** - master data (Kendo grid + dialog).
-* **Pricing Settings** - rate card, branch / travel cost, overhead %, profit %, GST, validity, team sizes, payment split.
+* **Pricing Settings** - reference numbering (below), rate card, branch / travel cost, overhead %, profit %, GST, validity, team sizes, payment split.
   They are copied into each proposal when it is created, so later changes do not alter saved proposals.
 
 ## Pricing logic (`PricingCalculator`)
@@ -69,6 +69,19 @@ tracking with room + food; `DR` tracking salary only). The workbook uses the dat
 app uses the tracking salary - identical today because both are 1,000.
 "Working days" in the timeline = ceil(effort days / team size).
 
+## Reference numbering (Pricing Settings > Reference numbering)
+
+Stored in the database (table `pricing_config` + running counters in `doc_sequence`), editable in the UI:
+
+* proposal prefix (default `LTPL/PRO`) and PO prefix (default `LTPL/PO`)
+* number size in digits (3-9, default 5 -> range 1 - 99999)
+* include the financial year (`2026-27`) in the number, and restart the running number every financial year
+* first number of a new series, and the **next** proposal / PO number (to continue from an existing numbering)
+
+Result: `<prefix>/<FY>/<number>-v<version>`, e.g. `LTPL/PRO/2026-27/00044-v1`, PO `LTPL/PO/2026-27/00007`.
+When the range is used up new proposals are refused until the size is increased. Issued references never change when the
+settings are changed later; editing only moves the `-v` version. API: `GET/PUT /api/numbering`.
+
 ## Document generation
 
 Templates live in `backend/src/main/resources/templates/` and were produced from the two sample documents by
@@ -83,11 +96,10 @@ Token rules (`DocxTemplateEngine`): `{{name}}` simple value, `{{list.field}}` re
 (cost table `costRows`, timeline `phases`), `{{?flag}}` drops the row when the flag is false. To change wording edit the
 .docx in Word (keep the tokens) - no code change needed; to add a new value add it in `ProposalDocumentBuilder`.
 
-Filled automatically: reference no (`LTPL/PRO/<FY>/<seq>-v<version>`), date, customer name / address, contact person,
+Filled automatically: reference no (see Reference numbering), date, customer name / address, contact person,
 asset and branch counts, cost table (services, software, implementation, discount, total, GST, grand total),
 timeline (phases in scope, working days), milestone payment %, team sizes, validity and start days.
-Saving a proposal that already had its PO generated creates the next version (`-v2`). PO no
-(`LTPL/PO/<FY>/<seq>`) and PO date are assigned the first time the document is generated.
+Saving a proposal that already had its PO generated creates the next version (`-v2`). PO no and PO date are assigned the first time the document is generated.
 
 ## API (`/api`)
 

@@ -9,5 +9,4 @@ spring:
   flyway:
     enabled: true
 app:
-  ref-prefix: LTPL
   cors-allowed-origins: http://localhost:4200

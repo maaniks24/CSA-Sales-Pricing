@@ -26,5 +26,4 @@ management:
         include: health,info
 
 app:
-  ref-prefix: ${REF_PREFIX:LTPL}
   cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
