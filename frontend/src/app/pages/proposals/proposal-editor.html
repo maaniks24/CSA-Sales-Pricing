@@ -1,0 +1,203 @@
+<div class="page-head">
+  <h1>{{ title }}
+    @if (saved()?.status === 'PO_GENERATED') { <span class="chip po">PO generated · {{ saved()?.poNo }}</span> }
+    @else if (saved()) { <span class="chip saved">Saved</span> }
+    @if (dirty() && saved()) { <span class="chip">unsaved changes</span> }
+  </h1>
+  <div class="actions">
+    <a routerLink="/proposals" class="k-button k-button-md k-rounded-md k-button-flat"><span class="k-button-text">Back to list</span></a>
+    <button kendoButton themeColor="primary" [disabled]="busy() || !customerId" (click)="save()">Save</button>
+    <button kendoButton themeColor="success" [disabled]="!canGenerate()" (click)="generatePo()"
+      [title]="canGenerate() ? 'Download the Word document' : 'Save the proposal first'">Generate PO</button>
+  </div>
+</div>
+
+@if (loaded()) {
+<div class="layout">
+  <div class="main">
+    <!-- 1. customer -->
+    <section class="card">
+      <h2>1. Customer</h2>
+      <div class="grid-2">
+        <div class="field wide">
+          <label>Customer</label>
+          <kendo-dropdownlist [data]="shownCustomers()" textField="name" valueField="id" [valuePrimitive]="true"
+            [filterable]="true" (filterChange)="customerFilter.set($event)" [(ngModel)]="customerId" (valueChange)="onCustomer($event)"
+            [defaultItem]="{ id: null, name: 'Select customer...' }"></kendo-dropdownlist>
+        </div>
+        <div class="field">
+          <label>Contact person (addressee)</label>
+          <kendo-textbox [(ngModel)]="contactName" (valueChange)="changed()"></kendo-textbox>
+        </div>
+        <div class="field">
+          <label>Proposal date</label>
+          <kendo-datepicker [(ngModel)]="proposalDate" format="dd/MM/yyyy" (valueChange)="changed()"></kendo-datepicker>
+        </div>
+        <div class="field">
+          <label>No. of assets</label>
+          <kendo-numerictextbox [(ngModel)]="assetCount" [min]="0" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox>
+        </div>
+        <div class="field">
+          <label>No. of branches</label>
+          <kendo-numerictextbox [(ngModel)]="branchCount" [min]="1" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox>
+        </div>
+        <div class="field">
+          <label>Discount % (customer default, editable)</label>
+          <kendo-numerictextbox [(ngModel)]="discountPercent" [min]="0" [max]="100" [decimals]="2" format="n2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. software -->
+    <section class="card">
+      <div class="section-head">
+        <h2>2. Software</h2>
+        <button kendoButton size="small" (click)="addSoftware()">+ Add software</button>
+      </div>
+      @if (software.length === 0) { <p class="muted">No software added. Leave empty for a services-only proposal.</p> }
+      @if (software.length) {
+        <table class="lines">
+          <thead><tr><th>Software</th><th class="num">Assets covered</th><th class="num">Subscription</th><th class="num">Implementation</th><th></th></tr></thead>
+          <tbody>
+            @for (s of software; track $index; let i = $index) {
+              <tr>
+                <td>
+                  <kendo-dropdownlist [data]="softwareMaster()" textField="name" valueField="id" [valuePrimitive]="true"
+                    [(ngModel)]="s.softwareId" (valueChange)="changed()" [defaultItem]="{ id: null, name: 'Select software...' }"></kendo-dropdownlist>
+                </td>
+                <td class="num">
+                  <kendo-numerictextbox [(ngModel)]="s.assetsCovered" [min]="1" [decimals]="0" format="n0" [spinners]="false"
+                    [placeholder]="'= ' + assetCount" (valueChange)="changed()"></kendo-numerictextbox>
+                </td>
+                <td class="num">{{ softwareLine(i)?.price | number: '1.2-2' }}</td>
+                <td class="num">{{ softwareLine(i)?.implementationCharge | number: '1.2-2' }}</td>
+                <td><button kendoButton size="small" fillMode="flat" themeColor="error" (click)="removeSoftware(i)">Remove</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="hint">Price is proportional to the covered assets (e.g. 90,000 per 3,000 assets) plus the one-time implementation charge.</p>
+      }
+    </section>
+
+    <!-- 3. services -->
+    <section class="card">
+      <h2>3. Services</h2>
+      <div class="scroll">
+        <table class="lines services">
+          <thead>
+            <tr><th>#</th><th>Phase</th><th>Scope</th><th class="num">PPD-PP</th><th class="num">Effort days</th>
+              <th class="num">Room exp</th><th class="num">Food exp</th><th class="num">Salary</th><th class="num">Total</th><th class="num">Days*</th></tr>
+          </thead>
+          <tbody>
+            @for (s of services; track s.serviceId; let i = $index) {
+              @let l = lineFor(s.serviceId);
+              <tr [class.off]="!s.inScope">
+                <td>{{ i + 1 }}</td>
+                <td class="phase"><b>{{ s.code }}</b><span class="muted">{{ s.name }}</span></td>
+                <td><kendo-switch [(ngModel)]="s.inScope" onLabel="Yes" offLabel="No" (valueChange)="changed()"></kendo-switch></td>
+                <td class="num"><kendo-numerictextbox [(ngModel)]="s.assetsPerDay" [min]="1" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></td>
+                <td class="num">{{ l?.effortDays | number: '1.2-2' }}</td>
+                <td class="num">{{ l?.roomCost | number: '1.0-0' }}</td>
+                <td class="num">{{ l?.foodCost | number: '1.0-0' }}</td>
+                <td class="num">{{ l?.salaryCost | number: '1.0-0' }}</td>
+                <td class="num"><b>{{ l?.totalCost | number: '1.0-0' }}</b></td>
+                <td class="num">{{ l?.workingDays }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr><td colspan="5">Phases total</td>
+              <td class="num">{{ totals()?.roomTotal | number: '1.0-0' }}</td>
+              <td class="num">{{ totals()?.foodTotal | number: '1.0-0' }}</td>
+              <td class="num">{{ totals()?.salaryTotal | number: '1.0-0' }}</td>
+              <td class="num">{{ (totals()?.roomTotal ?? 0) + (totals()?.foodTotal ?? 0) + (totals()?.salaryTotal ?? 0) | number: '1.0-0' }}</td><td></td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="hint">* Working days = effort days / team size (tracking team or data audit team, see parameters below).</p>
+    </section>
+
+    <!-- 4. parameters -->
+    <details class="card">
+      <summary><h2 style="display:inline">4. Costing parameters &amp; document terms</h2> <span class="muted">(defaults from Pricing Settings, editable per proposal)</span></summary>
+      @if (params && terms) {
+      <h3>Rates per person per day</h3>
+      <div class="grid-2">
+        <div class="field"><label>Tracking - room</label><kendo-numerictextbox [(ngModel)]="params.trackingRoom" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Tracking - food</label><kendo-numerictextbox [(ngModel)]="params.trackingFood" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Tracking - salary</label><kendo-numerictextbox [(ngModel)]="params.trackingSalary" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Data audit - salary</label><kendo-numerictextbox [(ngModel)]="params.dataAuditSalary" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Sr executive - room</label><kendo-numerictextbox [(ngModel)]="params.srExecRoom" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Sr executive - food</label><kendo-numerictextbox [(ngModel)]="params.srExecFood" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Sr executive - salary</label><kendo-numerictextbox [(ngModel)]="params.srExecSalary" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Sr executive days (optional)</label><kendo-numerictextbox [(ngModel)]="srExecDays" [min]="0" [decimals]="1" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+      </div>
+      <h3>Loadings</h3>
+      <div class="grid-2">
+        <div class="field"><label>Cost per branch</label><kendo-numerictextbox [(ngModel)]="params.costPerBranch" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Travel / local conveyance</label><kendo-numerictextbox [(ngModel)]="params.travelCost" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Overheads %</label><kendo-numerictextbox [(ngModel)]="params.overheadPercent" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Profit %</label><kendo-numerictextbox [(ngModel)]="params.profitPercent" [min]="0" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+      </div>
+      <h3>Document terms</h3>
+      <div class="grid-2">
+        <div class="field"><label>GST %</label><kendo-numerictextbox [(ngModel)]="terms.gstPercent" [min]="0" [max]="100" [decimals]="2" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Validity (days)</label><kendo-numerictextbox [(ngModel)]="terms.validityDays" [min]="1" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Project start (days after PO)</label><kendo-numerictextbox [(ngModel)]="terms.commencementDays" [min]="0" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Tracking team size</label><kendo-numerictextbox [(ngModel)]="terms.trackingTeamSize" [min]="1" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Data audit team size</label><kendo-numerictextbox [(ngModel)]="terms.dataTeamSize" [min]="1" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Payment: advance with PO %</label><kendo-numerictextbox [(ngModel)]="terms.pay1" [min]="0" [max]="100" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Payment: on physical verification %</label><kendo-numerictextbox [(ngModel)]="terms.pay2" [min]="0" [max]="100" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+        <div class="field"><label>Payment: on completion %</label><kendo-numerictextbox [(ngModel)]="terms.pay3" [min]="0" [max]="100" [decimals]="0" format="n0" [spinners]="false" (valueChange)="changed()"></kendo-numerictextbox></div>
+      </div>
+      @if (hasServices && terms.pay1 + terms.pay2 + terms.pay3 !== 100) {
+        <p class="error-text">Milestone payments add up to {{ terms.pay1 + terms.pay2 + terms.pay3 }}%, they must total 100%.</p>
+      }
+      <div class="field wide" style="margin-top:12px"><label>Internal notes (not printed)</label>
+        <kendo-textarea [(ngModel)]="notes" [rows]="2" (valueChange)="changed()"></kendo-textarea></div>
+      }
+    </details>
+  </div>
+
+  <!-- summary -->
+  <aside class="summary card">
+    <h2>Price summary</h2>
+    @if (calcError()) { <p class="error-text">{{ calcError() }}</p> }
+    @if (totals(); as t) {
+      <dl>
+        @if (hasServices) {
+          <dt class="group">Services</dt><dd></dd>
+          <dt>Phases (room + food + salary)</dt><dd>{{ t.roomTotal + t.foodTotal + t.salaryTotal | number: '1.2-2' }}</dd>
+          <dt>Branches ({{ branchCount }} × {{ params.costPerBranch | number: '1.0-0' }})</dt><dd>{{ t.branchCost | number: '1.2-2' }}</dd>
+          <dt>Travel / local conveyance</dt><dd>{{ t.travelCost | number: '1.2-2' }}</dd>
+          @if (t.srExecCost) { <dt>Senior executive</dt><dd>{{ t.srExecCost | number: '1.2-2' }}</dd> }
+          <dt>Sub-total</dt><dd>{{ t.servicesSubtotal | number: '1.2-2' }}</dd>
+          <dt>Overheads @ {{ params.overheadPercent }}%</dt><dd>{{ t.overheadAmount | number: '1.2-2' }}</dd>
+          <dt>Profit @ {{ params.profitPercent }}%</dt><dd>{{ t.profitAmount | number: '1.2-2' }}</dd>
+          <dt class="strong">Services price</dt><dd class="strong">{{ t.servicesPrice | number: '1.2-2' }}</dd>
+          <dt class="muted">Per asset</dt><dd class="muted">{{ t.ratePerAsset | number: '1.2-4' }}</dd>
+        }
+        @if (software.length) {
+          <dt class="group">Software</dt><dd></dd>
+          <dt class="strong">Software total</dt><dd class="strong">{{ t.softwareTotal | number: '1.2-2' }}</dd>
+        }
+        <dt class="group">Total</dt><dd></dd>
+        <dt>Gross total</dt><dd>{{ t.grossTotal | number: '1.2-2' }}</dd>
+        <dt>Discount @ {{ discountPercent }}%</dt><dd>- {{ t.discountAmount | number: '1.2-2' }}</dd>
+        <dt>Total (excl. GST)</dt><dd>{{ t.netTotal | number: '1.2-2' }}</dd>
+        <dt>GST @ {{ terms.gstPercent }}%</dt><dd>{{ t.gstAmount | number: '1.2-2' }}</dd>
+        <dt class="grand">Grand total</dt><dd class="grand">{{ t.grandTotal | number: '1.2-2' }}</dd>
+      </dl>
+    } @else {
+      <p class="muted">Select a customer to see the price.</p>
+    }
+    <div class="actions">
+      <button kendoButton themeColor="primary" [disabled]="busy() || !customerId" (click)="save()">Save</button>
+      <button kendoButton themeColor="success" [disabled]="!canGenerate()" (click)="generatePo()">Generate PO</button>
+    </div>
+    @if (!saved()) { <p class="hint">Save the proposal to enable <b>Generate PO</b>.</p> }
+    @else if (dirty()) { <p class="hint">Save your changes to enable <b>Generate PO</b>.</p> }
+  </aside>
+</div>
+}

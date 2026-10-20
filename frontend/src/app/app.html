@@ -1,0 +1,22 @@
+<kendo-appbar position="top" class="app-bar">
+  <kendo-appbar-section>
+    <span class="brand">Levantare <small>Sales &amp; Pricing</small></span>
+  </kendo-appbar-section>
+  <kendo-appbar-spacer></kendo-appbar-spacer>
+  <kendo-appbar-section>
+    <a routerLink="/proposals/new" class="k-button k-button-solid k-button-solid-primary k-button-md k-rounded-md">
+      <span class="k-button-text">+ New Proposal</span>
+    </a>
+  </kendo-appbar-section>
+</kendo-appbar>
+
+<div class="shell">
+  <nav class="side-nav">
+    @for (n of nav; track n.path) {
+      <a [routerLink]="n.path" routerLinkActive="active">{{ n.label }}</a>
+    }
+  </nav>
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>
