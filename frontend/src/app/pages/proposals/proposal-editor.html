@@ -2,6 +2,7 @@
   <h1>{{ title }}
     @if (saved()?.status === 'PO_GENERATED') { <span class="chip po">PO generated · {{ saved()?.poNo }}</span> }
     @else if (saved()) { <span class="chip saved">Saved</span> }
+    @if (saved()) { <span class="chip">v{{ saved()?.version }}</span> }
     @if (dirty() && saved()) { <span class="chip">unsaved changes</span> }
   </h1>
   <div class="actions">
@@ -196,6 +197,9 @@
       <button kendoButton themeColor="primary" [disabled]="busy() || !customerId" (click)="save()">Save</button>
       <button kendoButton themeColor="success" [disabled]="!canGenerate()" (click)="generatePo()">Generate PO</button>
     </div>
+    @if (saved()?.status === 'PO_GENERATED' && !dirty()) {
+      <p class="hint">Document issued as v{{ saved()?.version }}. You can keep editing: saving creates v{{ (saved()?.version ?? 0) + 1 }}, then generate again.</p>
+    }
     @if (!saved()) { <p class="hint">Save the proposal to enable <b>Generate PO</b>.</p> }
     @else if (dirty()) { <p class="hint">Save your changes to enable <b>Generate PO</b>.</p> }
   </aside>

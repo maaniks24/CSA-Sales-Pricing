@@ -144,4 +144,46 @@ class ProposalFlowTest {
         mvc.perform(post("/api/customers").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"\",\"name\":\"\"}")).andExpect(status().isBadRequest());
     }
+
+    @Test
+    void proposalCanBeEditedSavedAndRegeneratedRepeatedly() throws Exception {
+        long apexon = idOf("/api/customers", "C002");
+        String body = servicesBody(apexon, "");
+        long id = json.readTree(mvc.perform(post("/api/proposals").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andReturn().getResponse().getContentAsString()).get("id").asLong();
+
+        // several saves before any document was issued keep version 1
+        for (int assets : new int[] {6000, 7000}) {
+            JsonNode u = json.readTree(mvc.perform(put("/api/proposals/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                    .content(body.replace("\"assetCount\":5000", "\"assetCount\":" + assets)))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+            assertThat(u.get("version").asInt()).isEqualTo(1);
+            assertThat(u.get("assetCount").asInt()).isEqualTo(assets);
+        }
+        assertThat(docText(id)).contains("Approx 7,000 assets").doesNotContain("5,000 assets");
+
+        // after the document was issued every edit creates the next version and the new document shows the change
+        JsonNode v2 = json.readTree(mvc.perform(put("/api/proposals/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content(body.replace("\"assetCount\":5000", "\"assetCount\":8000").replace("\"discountPercent\":0", "\"discountPercent\":10")))
+                .andReturn().getResponse().getContentAsString());
+        assertThat(v2.get("version").asInt()).isEqualTo(2);
+        String t2 = docText(id);
+        assertThat(t2).contains("Approx 8,000 assets").contains("-v2").contains("Less: Discount @ 10%");
+
+        JsonNode v3 = json.readTree(mvc.perform(put("/api/proposals/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content(body)).andReturn().getResponse().getContentAsString());
+        assertThat(v3.get("version").asInt()).isEqualTo(3);
+        assertThat(docText(id)).contains("Approx 5,000 assets").contains("-v3").doesNotContain("Less: Discount");
+        // generating again without edits keeps the version
+        assertThat(docText(id)).contains("-v3");
+        assertThat(read("/api/proposals/" + id).get("version").asInt()).isEqualTo(3);
+    }
+
+    private String docText(long id) throws Exception {
+        byte[] docx = mvc.perform(post("/api/proposals/{id}/generate-po", id)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        try (XWPFDocument d = new XWPFDocument(new ByteArrayInputStream(docx)); XWPFWordExtractor ex = new XWPFWordExtractor(d)) {
+            return ex.getText();
+        }
+    }
 }

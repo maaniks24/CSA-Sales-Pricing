@@ -35,8 +35,9 @@ import { Notify } from '../../core/notify.service';
       <kendo-grid-column field="grandTotal" title="Total (incl. GST)" [width]="160" class="num" headerClass="num">
         <ng-template kendoGridCellTemplate let-r>{{ r.grandTotal | number: '1.2-2' }}</ng-template>
       </kendo-grid-column>
-      <kendo-grid-column title="" [width]="210" [sticky]="false">
+      <kendo-grid-column title="" [width]="290" [sticky]="false">
         <ng-template kendoGridCellTemplate let-r>
+          <a [routerLink]="['/proposals', r.id]" class="k-button k-button-sm k-button-solid k-button-solid-base k-rounded-md"><span class="k-button-text">Edit</span></a>
           <button kendoButton size="small" (click)="download(r)">Generate PO</button>
           <button kendoButton size="small" fillMode="flat" themeColor="error" (click)="confirmDelete = r">Delete</button>
         </ng-template>
