@@ -131,6 +131,15 @@ class ProposalFlowTest {
     }
 
     @Test
+    void lookupsServeTheProposalScreen() throws Exception {
+        assertThat(read("/api/lookups/customers")).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(read("/api/lookups/software").get(0).get("assetBlock").asInt()).isEqualTo(3000);
+        JsonNode services = read("/api/lookups/services");
+        assertThat(services.get(0).get("code").asText()).isEqualTo("FAR");
+        assertThat(services.get(0).get("assetsPerDay").decimalValue()).isEqualByComparingTo("800");
+    }
+
+    @Test
     void dashboardAndMasterData() throws Exception {
         JsonNode d = read("/api/dashboard");
         assertThat(d.get("customers").asLong()).isGreaterThanOrEqualTo(2);

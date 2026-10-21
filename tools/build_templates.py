@@ -16,7 +16,7 @@ from docx.oxml.ns import qn
 
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLES = ROOT / "docs" / "samples"
-OUT = ROOT / "backend" / "src" / "main" / "resources" / "templates"
+OUT = ROOT / "backend" / "src" / "main" / "resources" / "csa-templates"
 
 
 def to_docx(doc_file, tmp):

@@ -92,9 +92,9 @@ export class ProposalEditor implements OnInit {
 
     const existing = this.id() ? this.api.proposal(+this.id()!) : of(null);
     forkJoin({
-      customers: this.api.customers.list(),
-      software: this.api.software.list(),
-      services: this.api.services.list(),
+      customers: this.api.lookups.customers(),
+      software: this.api.lookups.software(),
+      services: this.api.lookups.services(),
       config: this.api.config(),
       proposal: existing,
     }).subscribe({

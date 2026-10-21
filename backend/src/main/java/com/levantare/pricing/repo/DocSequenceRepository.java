@@ -10,6 +10,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface DocSequenceRepository extends JpaRepository<DocSequence, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select s from DocSequence s where s.seqKey = :key")
+    @Query("select s from CsaDocSequence s where s.seqKey = :key")
     Optional<DocSequence> lockByKey(@Param("key") String key);
 }

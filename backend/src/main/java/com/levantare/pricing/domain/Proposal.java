@@ -9,7 +9,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
-@Entity
+@Entity(name = "CsaProposal")
 @Table(name = "proposal")
 @Getter
 @Setter

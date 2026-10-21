@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
 
-@Entity
+@Entity(name = "CsaProposalSoftware")
 @Table(name = "proposal_software")
 @Getter
 @Setter

@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /** Service master: one costed phase (FAR, PV, DC, DM, DR, TG ...). */
-@Entity
+@Entity(name = "CsaServiceItem")
 @Table(name = "service_master")
 @Getter
 @Setter

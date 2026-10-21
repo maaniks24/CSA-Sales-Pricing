@@ -14,7 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.levantare.pricing.web")
 public class ApiExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
@@ -46,6 +46,16 @@ public class ApiExceptionHandler {
         log.debug("Integrity violation", e);
         return body(HttpStatus.CONFLICT, "The record is referenced by proposals (or duplicates another record). "
                 + "Mark it inactive instead of deleting it.", null);
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    ResponseEntity<Map<String, Object>> noResource(org.springframework.web.servlet.resource.NoResourceFoundException e) {
+        return body(HttpStatus.NOT_FOUND, "Not found", null);
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<Map<String, Object>> methodNotAllowed(org.springframework.web.HttpRequestMethodNotSupportedException e) {
+        return body(HttpStatus.METHOD_NOT_ALLOWED, e.getMessage(), null);
     }
 
     @ExceptionHandler(Exception.class)

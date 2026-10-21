@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /** Single row table (id = 1) holding the defaults used for new proposals. */
-@Entity
+@Entity(name = "CsaPricingConfig")
 @Table(name = "pricing_config")
 @Getter
 @Setter

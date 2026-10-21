@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /** One service phase of a proposal with its calculated effort and cost. */
-@Entity
+@Entity(name = "CsaProposalService")
 @Table(name = "proposal_service")
 @Getter
 @Setter

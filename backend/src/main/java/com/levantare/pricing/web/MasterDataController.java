@@ -10,25 +10,24 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-/** CRUD for the customer, software and service masters plus the global pricing configuration. */
+/**
+ * CRUD for the customer, software and service masters. Switch off with {@code csa.masters.enabled=false} when the host
+ * application owns these masters (see docs/INTEGRATION-GUIDE.md).
+ */
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "csa.masters.enabled", havingValue = "true", matchIfMissing = true)
 @RequestMapping("/api")
 public class MasterDataController {
 
     private final CustomerRepository customers;
     private final SoftwareRepository software;
     private final ServiceItemRepository services;
-    private final PricingConfigRepository config;
-    private final com.levantare.pricing.service.NumberingService numbering;
 
     public MasterDataController(CustomerRepository customers, SoftwareRepository software,
-                                ServiceItemRepository services, PricingConfigRepository config,
-                                com.levantare.pricing.service.NumberingService numbering) {
+                                ServiceItemRepository services) {
         this.customers = customers;
         this.software = software;
         this.services = services;
-        this.config = config;
-        this.numbering = numbering;
     }
 
     // ---- customers ----
@@ -121,32 +120,5 @@ public class MasterDataController {
     public void deleteService(@PathVariable Long id) {
         services.delete(services.findById(id).orElseThrow(() -> new NotFoundException("Service", id)));
         services.flush();
-    }
-
-    // ---- pricing configuration ----
-    @GetMapping("/config")
-    public PricingConfig config() {
-        return config.findById(PricingConfig.ID).orElseThrow(() -> new NotFoundException("Config", PricingConfig.ID));
-    }
-
-    @PutMapping("/config")
-    public PricingConfig updateConfig(@Valid @RequestBody PricingConfig c) {
-        // numbering has its own endpoint, never overwrite it from here
-        PricingConfig current = config();
-        current.setParams(c.getParams());
-        current.setTerms(c.getTerms());
-        return config.save(current);
-    }
-
-    // ---- reference numbering ----
-    @GetMapping("/numbering")
-    public com.levantare.pricing.web.dto.NumberingDto numbering() {
-        return numbering.view();
-    }
-
-    @PutMapping("/numbering")
-    public com.levantare.pricing.web.dto.NumberingDto updateNumbering(
-            @Valid @RequestBody com.levantare.pricing.web.dto.NumberingDto n) {
-        return numbering.update(n);
     }
 }

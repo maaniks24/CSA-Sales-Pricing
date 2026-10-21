@@ -17,16 +17,16 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
 
     boolean existsByCustomerId(Long customerId);
 
-    @Query("select p.status, count(p), coalesce(sum(p.grandTotal), 0) from Proposal p group by p.status")
+    @Query("select p.status, count(p), coalesce(sum(p.grandTotal), 0) from CsaProposal p group by p.status")
     List<Object[]> totalsByStatus();
 
-    @Query("select p.customer.name, count(p), coalesce(sum(p.grandTotal), 0) from Proposal p "
+    @Query("select p.customer.name, count(p), coalesce(sum(p.grandTotal), 0) from CsaProposal p "
             + "group by p.customer.name order by sum(p.grandTotal) desc")
     List<Object[]> totalsByCustomer();
 
-    @Query("select p.proposalDate, p.grandTotal from Proposal p where p.proposalDate >= :from")
+    @Query("select p.proposalDate, p.grandTotal from CsaProposal p where p.proposalDate >= :from")
     List<Object[]> dateAndTotalSince(@Param("from") LocalDate from);
 
-    @Query("select count(p) from Proposal p where p.status = :s")
+    @Query("select count(p) from CsaProposal p where p.status = :s")
     long countByStatus(@Param("s") ProposalStatus s);
 }

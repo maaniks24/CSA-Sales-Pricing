@@ -20,6 +20,13 @@ export class ApiService {
   software = this.crud<Software>('software');
   services = this.crud<ServiceItem>('services');
 
+  /** Read-only lists for the proposal screen (served from the customer / software / service data of the backend). */
+  lookups = {
+    customers: () => this.http.get<Customer[]>(`${API}/lookups/customers`),
+    software: () => this.http.get<Software[]>(`${API}/lookups/software`),
+    services: () => this.http.get<ServiceItem[]>(`${API}/lookups/services`),
+  };
+
   config(): Observable<PricingConfig> {
     return this.http.get<PricingConfig>(`${API}/config`);
   }

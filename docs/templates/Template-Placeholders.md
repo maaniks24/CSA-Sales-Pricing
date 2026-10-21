@@ -8,7 +8,7 @@ Review files (open in Word, the dynamic parts show as `{{placeholder}}`):
 Everything that is NOT a `{{placeholder}}` is fixed standard text of the sample documents.
 Money is printed Indian style (7,88,000 / 4,41,562.50, no decimals when the amount is whole), dates as dd/mm/yyyy.
 
-The shipped copies used by the application are in `backend/src/main/resources/templates/`
+The shipped copies used by the application are in `backend/src/main/resources/csa-templates/`
 (copy a reviewed/edited .docx over them, keep the placeholders).
 
 ## 1. Simple placeholders

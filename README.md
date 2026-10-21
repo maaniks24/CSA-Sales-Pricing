@@ -38,6 +38,11 @@ both documents).
 > but a banner and a watermark are shown. Activate with `npx kendo-ui-license activate` (key file
 > `kendo-ui-license.txt`, not committed) - see https://www.telerik.com/kendo-angular-ui/components/my-license/.
 
+## Adding the proposal feature to an existing application
+
+If another application already owns the Customer / Software / Service masters, see
+[`docs/INTEGRATION-GUIDE.md`](docs/INTEGRATION-GUIDE.md) (also as `.docx`) and the SQL in `docs/integration/sql/`.
+
 ## Screens
 
 * **Dashboard** - KPIs, proposal value of the last 6 months, status split, top customers, recent proposals.
@@ -84,7 +89,7 @@ settings are changed later; editing only moves the `-v` version. API: `GET/PUT /
 
 ## Document generation
 
-Templates live in `backend/src/main/resources/templates/` and were produced from the two sample documents by
+Templates live in `backend/src/main/resources/csa-templates/` and were produced from the two sample documents by
 `tools/build_templates.py` (customer specific text replaced by `{{tokens}}`; samples are in `docs/samples/`).
 
 | Proposal contains | Template |

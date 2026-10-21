@@ -19,8 +19,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProposalDocumentBuilder {
 
-    static final String SERVICES_TEMPLATE = "templates/services-proposal.docx";
-    static final String SOFTWARE_TEMPLATE = "templates/software-proposal.docx";
+    static final String SERVICES_TEMPLATE = "csa-templates/services-proposal.docx";
+    static final String SOFTWARE_TEMPLATE = "csa-templates/software-proposal.docx";
 
     public byte[] build(Proposal p) throws IOException {
         boolean hasServices = p.getServiceItems().stream().anyMatch(ProposalService::isInScope);
